@@ -15,7 +15,7 @@ What makes Droidspaces unique is its **zero-dependency, native execution** on bo
 
 - **Tiny footprint:** under 300KB per platform
 - **Truly native:** runs directly on Android and Linux from the same binary
-- **Wide architecture support:** `aarch64`, `armhf`, `x86_64`, and `x86` as a single static binary
+- **Wide architecture support:** `aarch64`, `armhf`, `x86_64`, `x86`, and `riscv64` as a single static binary
 - **Beautiful Android app:** manage unlimited containers and do everything the CLI can, all from a clean, intuitive GUI
 
 **Android** + **Linux Namespaces** = **Droidspaces**. Since Android is built on the Linux kernel, Droidspaces works seamlessly on Linux Desktop too. Both platforms are equally supported and maintained.
