@@ -1246,20 +1246,31 @@ int is_systemd_rootfs(const char *path) {
     }
   }
 
-  /* Fallback: /sbin/init symlink target -- covers systemd and NixOS. */
+  /* Fallback: /sbin/init symlink target or script contents.
+   * Works for both:
+   *   (a) a symlink -> .../systemd (classic distros, NixOS-systemd)
+   *   (b) a plain shell-script wrapper that exec's systemd (e.g. some
+   *       NixOS tarballs where /sbin/init is a real file, not a symlink)
+   * NOTE: do NOT treat /nix/store alone as evidence of systemd -- Nix
+   * can package any init system (finit, openrc, runit, ...).  We only
+   * return 1 when we can see the literal string "systemd". */
   if (path_len + 12 <= sizeof(buf)) { /* 10 chars + '/' prefix + '\0' = 12 */
     memcpy(buf, path, path_len);
     memcpy(buf + path_len, "/sbin/init", 11);
     char link_target[PATH_MAX];
     ssize_t len = readlink(buf, link_target, sizeof(link_target) - 1);
     if (len != -1) {
+      /* Case (a): symlink - check the target path for "systemd" */
       link_target[len] = '\0';
       if (strstr(link_target, "systemd"))
         return 1;
-      /* NixOS: /sbin/init -> /nix/store/<hash>-nixos-system-.../init
-       * That wrapper execs systemd. The nix store path is unique enough. */
-      if (strstr(link_target, "/nix/store"))
-        return 1;
+    } else {
+      /* Case (b): regular file - grep script body for "systemd" */
+      char script_buf[4096];
+      if (read_file(buf, script_buf, sizeof(script_buf)) > 0) {
+        if (strstr(script_buf, "systemd"))
+          return 1;
+      }
     }
   }
 
@@ -1315,14 +1326,30 @@ ds_init_type_t detect_container_init(const char *path) {
        S_ISREG(st.st_mode)))
     return DS_INIT_S6;
 
-  /* sysvinit: /sbin/init is NOT a symlink, or symlink points to sysvinit */
+  /* sysvinit: /sbin/init is a regular binary, or symlink points to sysvinit.
+   * If /sbin/init is a real file (not a symlink), grep its content before
+   * declaring sysvinit -- Nix wrapper scripts must not be misclassified.
+   * NOTE: /nix/store presence does NOT imply systemd; finit, openrc, etc.
+   * can live there too.  Only match on the literal init-system name. */
   if (PROBE_PATH("/sbin/init")) {
     char target[PATH_MAX];
     ssize_t len = readlink(buf, target, sizeof(target) - 1);
     if (len == -1) {
-      /* not a symlink -> classic sysvinit binary */
-      if (stat(buf, &st) == 0 && S_ISREG(st.st_mode))
+      /* not a symlink -> stat and, if regular, inspect script body */
+      if (stat(buf, &st) == 0 && S_ISREG(st.st_mode)) {
+        char script_buf[4096];
+        if (read_file(buf, script_buf, sizeof(script_buf)) > 0) {
+          if (strstr(script_buf, "systemd"))
+            return DS_INIT_SYSTEMD;
+          if (strstr(script_buf, "busybox"))
+            return DS_INIT_BUSYBOX;
+          /* Any other Nix wrapper (finit, openrc, ...) falls through to
+           * DS_INIT_UNKNOWN so the caller can handle it gracefully. */
+          if (strstr(script_buf, "/nix/store"))
+            return DS_INIT_UNKNOWN;
+        }
         return DS_INIT_SYSVINIT;
+      }
     } else {
       target[len] = '\0';
       if (strstr(target, "busybox"))
