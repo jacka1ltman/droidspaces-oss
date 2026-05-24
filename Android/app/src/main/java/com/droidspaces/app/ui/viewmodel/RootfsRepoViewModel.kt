@@ -43,6 +43,7 @@ class RootfsRepoViewModel(application: Application) : AndroidViewModel(applicati
         private set
 
     private val downloadJobs = mutableMapOf<String, Job>()
+    private val downloadIds  = mutableMapOf<String, Long>()
 
     fun load() {
         if (uiState is RepoUiState.Loading) return
@@ -119,8 +120,10 @@ class RootfsRepoViewModel(application: Application) : AndroidViewModel(applicati
         if (downloadStates[asset.name] is AssetDownloadState.Downloading) return
         val ctx = getApplication<Application>()
         downloadJobs[asset.name]?.cancel()
+        val downloadId = RootfsDownloadManager.enqueue(ctx, asset)
+        downloadIds[asset.name] = downloadId
         downloadJobs[asset.name] = viewModelScope.launch {
-            RootfsDownloadManager.download(ctx, asset).collect { status ->
+            RootfsDownloadManager.pollFlow(ctx, asset, downloadId).collect { status ->
                 downloadStates = downloadStates.toMutableMap().apply {
                     put(asset.name, when (status) {
                         is DownloadStatus.Progress  -> AssetDownloadState.Downloading(status.percent)
@@ -133,6 +136,9 @@ class RootfsRepoViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun cancelDownload(asset: RootfsAsset) {
+        val ctx = getApplication<Application>()
+        downloadIds[asset.name]?.let { RootfsDownloadManager.cancel(ctx, it) }
+        downloadIds.remove(asset.name)
         downloadJobs[asset.name]?.cancel()
         downloadJobs.remove(asset.name)
         downloadStates = downloadStates.toMutableMap().apply { put(asset.name, AssetDownloadState.Idle) }
