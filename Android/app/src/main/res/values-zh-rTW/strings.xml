@@ -446,5 +446,4 @@
     <string name="repo_status_ready">已準備好</string>
     <string name="repo_status_downloading">下載中</string>
     <string name="repo_status_failed">失敗</string>
-    <string name="repo_downloads_count">%1$s 下載</string>
 </resources>

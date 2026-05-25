@@ -528,5 +528,4 @@
     <string name="repo_status_ready">READY</string>
     <string name="repo_status_downloading">DOWNLOADING</string>
     <string name="repo_status_failed">FAILED</string>
-    <string name="repo_downloads_count">%1$s downloads</string>
 </resources>

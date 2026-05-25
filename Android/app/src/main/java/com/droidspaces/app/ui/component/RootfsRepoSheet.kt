@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -420,19 +419,19 @@ private fun RootfsAssetCard(
                         }
                     }
 
-                    if (asset.downloadCount > 0) {
+                    if (asset.buildDate.isNotEmpty()) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                imageVector = Icons.Default.CalendarToday,
                                 contentDescription = null,
                                 modifier = Modifier.size(13.dp),
                                 tint = MaterialTheme.colorScheme.secondary
                             )
                             Text(
-                                text = context.getString(R.string.repo_downloads_count, formatCount(asset.downloadCount)),
+                                text = formatBuildDate(asset.buildDate),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.secondary
@@ -552,8 +551,13 @@ private fun formatSize(bytes: Long): String = when {
     else                    -> "$bytes B"
 }
 
-private fun formatCount(count: Int): String =
-    if (count >= 1_000) "%.1fk".format(count / 1_000.0) else count.toString()
+/** Formats "20260525" -> "2026-05-25" for display. Returns raw string if not 8 digits. */
+private fun formatBuildDate(raw: String): String {
+    if (raw.length == 8 && raw.all { it.isDigit() }) {
+        return "${raw.substring(0, 4)}-${raw.substring(4, 6)}-${raw.substring(6, 8)}"
+    }
+    return raw
+}
 
 @Composable
 private fun RepoSearchBar(query: String, onQueryChange: (String) -> Unit) {

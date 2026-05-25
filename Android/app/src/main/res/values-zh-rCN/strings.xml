@@ -449,6 +449,5 @@
     <string name="repo_status_ready">就绪</string>
     <string name="repo_status_downloading">下载中</string>
     <string name="repo_status_failed">失败</string>
-    <string name="repo_downloads_count">%1$s 个下载</string>
     <string name="notification_action_exit">退出</string>
 </resources>
